@@ -19,7 +19,14 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     return;
   }
   if (error?.code === 11000) {
-    response.status(409).json({ success: false, message: 'A record with that value already exists', data: null });
+    const duplicateEmail = error?.keyPattern?.email || error?.keyValue?.email;
+    response.status(409).json({
+      success: false,
+      message: duplicateEmail
+        ? 'An account with this email already exists. Sign in or reset your password.'
+        : 'A record with that value already exists',
+      data: null
+    });
     return;
   }
   console.error(error);

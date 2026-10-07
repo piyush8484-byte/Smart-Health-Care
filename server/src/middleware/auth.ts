@@ -28,7 +28,7 @@ export function authenticate(request: Request, response: Response, next: NextFun
 export function requireRole(...roles: UserRole[]) {
   return (request: Request, response: Response, next: NextFunction): void => {
     if (!request.user || !roles.includes(request.user.role)) {
-      response.status(403).json({ success: false, message: 'You do not have permission to access this resource', data: null });
+      response.status(403).json({ success: false, message: 'Access denied.', data: null });
       return;
     }
     next();

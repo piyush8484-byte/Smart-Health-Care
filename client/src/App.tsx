@@ -30,6 +30,7 @@ function AppRoutes() {
       </Route>
       <Route path="/login" element={session ? <Navigate to="/app" replace /> : <AuthPage mode="login" />} />
       <Route path="/register" element={session ? <Navigate to="/app" replace /> : <AuthPage mode="register" />} />
+      <Route path="/verify-email" element={<AuthPage mode="verify" />} />
       <Route path="/forgot-password" element={<AuthPage mode="forgot" />} />
       <Route path="/reset-password" element={<AuthPage mode="reset" />} />
       <Route element={<RouteGuard />}>

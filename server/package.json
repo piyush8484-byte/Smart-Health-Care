@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "seed": "tsx scripts/seed.ts",
+    "admin:create": "tsx scripts/createAdmin.ts",
     "device:simulate": "tsx scripts/deviceSimulator.ts",
     "test": "jest --runInBand"
   },

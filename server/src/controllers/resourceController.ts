@@ -351,7 +351,16 @@ export async function listAuditLogs(request: Request, response: Response): Promi
 export async function listUsers(request: Request, response: Response): Promise<void> {
   const { page, limit, skip } = pageParams(request);
   const filter = request.query.role ? { role: String(request.query.role).toUpperCase() } : {};
-  const [items, total] = await Promise.all([User.find(filter).select('-passwordHash -resetTokenHash').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(), User.countDocuments(filter)]);
+  const [users, total] = await Promise.all([User.find(filter).select('-passwordHash -resetTokenHash').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(), User.countDocuments(filter)]);
+  const doctorIds = users.filter((user) => user.role === 'DOCTOR').map((user) => user._id);
+  const doctorProfiles = doctorIds.length
+    ? await DoctorProfile.find({ userId: { $in: doctorIds } }).select('userId specialization licenseNumber').lean()
+    : [];
+  const doctorProfilesByUserId = new Map(doctorProfiles.map((profile) => [String(profile.userId), profile]));
+  const items = users.map((user) => {
+    const profile = doctorProfilesByUserId.get(String(user._id));
+    return profile ? { ...user, specialization: profile.specialization, licenseNumber: profile.licenseNumber } : user;
+  });
   responseData(response, 'Users', { items, page, limit, total, pages: Math.ceil(total / limit) });
 }
 

@@ -1,20 +1,21 @@
 export type Role = 'PATIENT' | 'DOCTOR' | 'ADMIN';
 export type User = { id: string; name: string; email: string; role: Role; isApproved: boolean };
 export type Session = { user: User; accessToken: string; refreshToken: string };
+export type RegistrationResult = { email: string; verificationRequired: true; expiresInSeconds: number; cooldownSeconds: number; delivery: 'smtp' | 'development-console' };
 type Envelope<T> = { success: boolean; message: string; data: T };
 
 const SESSION_KEY = 'smart-healthcare.session';
-const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+const configuredApiBase = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '');
+const API_BASE = configuredApiBase || '/api/v1';
+const API_ORIGIN = configuredApiBase?.replace(/\/api\/v1$/, '') || '';
 
 export function apiFileUrl(path: string): string {
-  const origin = (import.meta.env.VITE_API_URL || '').replace(/\/api\/v1\/?$/, '');
-  return `${origin}${path}`;
+  return `${API_ORIGIN}${path}`;
 }
 
 export async function checkApiHealth(): Promise<boolean> {
-  const origin = (import.meta.env.VITE_API_URL || '').replace(/\/api\/v1\/?$/, '');
   try {
-    return (await fetch(`${origin}/api/health`)).ok;
+    return (await fetch(`${API_ORIGIN}/api/health`)).ok;
   } catch {
     return false;
   }
@@ -81,7 +82,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, ret
   try {
     response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   } catch {
-    throw new Error('The healthcare service is unavailable. Check the API connection and try again.');
+    throw new Error('Unable to connect to the server. Please try again.');
   }
   if (response.status === 401 && retry && session?.refreshToken && !path.startsWith('/auth/')) {
     const refreshed = await refreshAccessToken(session.refreshToken);
@@ -90,7 +91,12 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, ret
   }
   const result = await response.json().catch(() => null) as Envelope<T> | null;
   if (!response.ok || !result?.success) {
-    throw new Error(result?.message || `Request failed (${response.status})`);
+    const data = result?.data as { fieldErrors?: Record<string, string[]>; formErrors?: string[] } | null | undefined;
+    const validationDetails = data?.fieldErrors
+      ? Object.values(data.fieldErrors).flat().join(' ')
+      : data?.formErrors?.join(' ');
+    const message = result?.message || `Request failed (${response.status})`;
+    throw new Error(validationDetails ? `${message}: ${validationDetails}` : message);
   }
   return result.data;
 }
@@ -103,6 +109,6 @@ export async function loginRequest(email: string, password: string): Promise<Ses
   return apiPost<Session>('/auth/login', { email, password });
 }
 
-export async function registerRequest(input: Record<string, unknown>): Promise<Session> {
-  return apiPost<Session>('/auth/register', input);
+export async function registerRequest(input: Record<string, unknown>): Promise<RegistrationResult> {
+  return apiPost<RegistrationResult>('/auth/register', input);
 }

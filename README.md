@@ -42,11 +42,11 @@ smart-healthcare-cloud-platform/
 
 React 19, TypeScript, Vite, Tailwind CSS, React Router, Recharts, Lucide, React Hook Form, and Zod. Public routes include Home, Services, About, Architecture, Contact, Privacy, and Terms. Login, registration, forgot/reset password, and role-gated patient, clinician, and admin dashboards share a typed REST client with refresh-token retry. Patient workflows cover profile/consent, records and prescriptions, appointments, vitals and risk explanations; clinician workflows cover schedule, patient history/vitals and prescriptions; admin workflows cover approvals, audit events and export.
 
-The workspace uses a responsive medical design system with keyboard focus states, reduced-motion support, dark mode, skeletons, toasts, empty states, and mobile navigation. Remote vitals refresh by polling. Risk outputs are labeled “Decision support, not a diagnosis.”
+The workspace uses a responsive medical design system with keyboard focus states, reduced-motion support, dark mode, skeletons, toasts, empty states, and mobile navigation. Remote vitals refresh by polling. Risk outputs are labeled “Decision support, not a diagnosis.” Patient and doctor registrations require email verification before login; doctors also need administrator credential approval before being listed to patients.
 
 ## Backend
 
-Node.js, Express, TypeScript, and MongoDB/Mongoose. API base path: `/api/v1`; health check: `/api/health`. The API uses access/refresh JWTs, bcrypt password hashes, role middleware, Zod request validation, AES-256-GCM encryption for clinical notes, audit events, rate limits, Helmet, and configurable CORS. Remote monitoring uses polling-friendly REST endpoints; the simulator posts demo readings. Risk results are explainable decision support, not a diagnosis.
+Node.js, Express, TypeScript, and MongoDB/Mongoose. API base path: `/api/v1`; health check: `/api/health`. The API uses access/refresh JWTs, bcrypt password hashes, expiring email-verification codes, role middleware, Zod request validation, AES-256-GCM encryption for clinical notes, audit events, rate limits, Helmet, and configurable CORS. Verification codes are HMAC-hashed in MongoDB, expire after 10 minutes, allow five attempts, and have a 60-second resend cooldown. Risk results are explainable decision support, not a diagnosis.
 
 ### Requirements
 
@@ -56,17 +56,31 @@ Node.js, Express, TypeScript, and MongoDB/Mongoose. API base path: `/api/v1`; he
 ### Run on Windows PowerShell
 
 1. Install Node.js and MongoDB, then open PowerShell in the project directory.
-2. Copy `.env.example` to `.env` and set unique JWT secrets, `MONGODB_URI`, and a 32-character encryption key. Never use example secrets in a deployed environment.
+2. Copy `.env.example` to `.env` and set unique JWT secrets, an email-verification secret, `MONGODB_URI`, and a 32-character encryption key. Never use example secrets in a deployed environment.
 3. Start MongoDB, then install dependencies from the repository root with `npm install`.
 4. Start the API and client together using `npm run dev`. The API is at `http://localhost:5000`; the website is at `http://localhost:5173`.
-5. Register patient and doctor accounts through the website. Doctor accounts require administrator approval before they appear in appointment searches.
-6. For local development only, `npm run seed` creates sample accounts and records. Do not use seeded accounts or sample health data in a deployed environment. Run `npm run device:simulate` only when you want to test the local vitals flow; stop it with Ctrl+C.
+5. Configure SMTP to deliver verification messages. For local development, if SMTP is absent or unreachable, the API explicitly reports development-console delivery and prints the code in the API terminal only. This fallback is disabled in production.
+6. Register a patient or doctor account through the website, enter the emailed or local-development code at `/verify-email`, then sign in with the same email and password. Doctors can sign in after email verification but must be approved by an administrator before appearing in appointment searches.
+7. Provision the first administrator using the backend-only procedure below. For local development only, `npm run seed` creates sample accounts and records. Do not use seeded accounts or sample health data in a deployed environment. Run `npm run device:simulate` only when you want to test the local vitals flow; stop it with Ctrl+C.
 
-Administrator accounts are not available through public registration. Provision administrator access only through a trusted deployment and database administration process.
+### Administrator Provisioning
+
+Administrator accounts cannot be created through public registration. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD` (at least 12 characters), and optionally `ADMIN_NAME` in the server environment, then run `npm run admin:create --workspace server` from the repository root. The password is hashed before it is saved; the command refuses to overwrite an existing account. Keep these values in the backend secret store and remove them from the runtime environment after provisioning.
+
+### Authentication and Deployment Environment
+
+- **Client:** `VITE_API_URL` is the public API base URL including `/api/v1` when the frontend and API are hosted on different origins. It contains no secrets. If omitted, the client expects a same-origin `/api/v1` reverse proxy.
+- **Server/database:** `NODE_ENV`, `PORT`, `MONGODB_URI`, `CLIENT_ORIGIN`, optional `ALLOWED_ORIGINS`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `ENCRYPTION_KEY`. In production use distinct strong secrets and HTTPS origins.
+- **Email verification:** `SMTP_HOST`, `SMTP_PORT` (587 for STARTTLS or 465 for implicit TLS), optional `SMTP_USER` and `SMTP_PASSWORD` as required by your provider, `EMAIL_FROM`, and `EMAIL_VERIFICATION_SECRET` (a unique random secret of at least 32 characters). Production startup rejects missing/local SMTP hosts and example JWT/encryption/verification secrets. Email verification is email-only; phone/SMS verification is not configured.
+- **Administrator setup only:** backend-only `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and optional `ADMIN_NAME` for the one-time provisioning command. Do not add them to `client/.env` or any `VITE_*` variable.
+
+The Vercel deployment in this repository builds the Vite client and serves the existing Express API through the same-origin `/api/*` serverless function. Set the Vercel project Root Directory to the repository root so both the `api/` function and `vercel.json` are included. The client therefore uses `/api/v1` by default, and registration is handled by `/api/v1/auth/register`. Configure the server environment variables listed above in the Vercel project settings, including a production MongoDB URI, distinct JWT and email-verification secrets, a 32-character encryption key, a real SMTP host and sender, and `CLIENT_ORIGIN` set to the exact deployed frontend origin. Production configuration rejects localhost database and frontend origins. Email verification cannot work until a real SMTP provider is configured. Vercel deployments must have these server-side variables configured; never put them in a `VITE_*` variable.
+
+If the API is intentionally hosted separately, set the client build variable `VITE_API_URL` to that actual public API origin plus `/api/v1` and configure the API host's `CLIENT_ORIGIN`/`ALLOWED_ORIGINS` to include the exact deployed frontend origin. This override contains no secrets. Do not set it to localhost or an invented placeholder in a production deployment.
 
 ### API Summary
 
-All successful responses use `{ "success": true, "message": "...", "data": ... }`; errors use the same shape with `success: false`. Auth routes are under `/api/v1/auth`; authenticated role-aware resources include `/users`, `/patients`, `/doctors`, `/appointments`, `/records`, `/prescriptions`, `/vitals`, `/alerts`, `/notifications`, `/analytics`, and admin-only `/audit-logs` and `/admin/export`. Reports accept PDF/JPEG/PNG uploads up to 10 MB and are downloaded through a patient-access-checked endpoint. List endpoints accept `page` and `limit` pagination parameters.
+All successful responses use `{ "success": true, "message": "...", "data": ... }`; errors use the same shape with `success: false`. Auth routes include `/api/v1/auth/register`, `/verify-email`, `/resend-verification`, `/login`, `/refresh`, `/logout`, `/forgot-password`, and `/reset-password`. Registration creates an unverified account and returns no access token until its emailed code is verified. `/api/v1/users/me` provides the authenticated profile. Role-aware resources include `/users`, `/patients`, `/doctors`, `/appointments`, `/records`, `/prescriptions`, `/vitals`, `/alerts`, `/notifications`, `/analytics`, and admin-only `/audit-logs` and `/admin/export`. Reports accept PDF/JPEG/PNG uploads up to 10 MB and are downloaded through a patient-access-checked endpoint. List endpoints accept `page` and `limit` pagination parameters.
 
 ### Containers and Cloud Deployment
 

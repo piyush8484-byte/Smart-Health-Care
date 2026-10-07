@@ -8,9 +8,9 @@ async function seed(): Promise<void> {
   await connectDatabase();
   const passwordHash = await bcrypt.hash(env.DEMO_PASSWORD, 12);
   const demoUsers = [
-    { name: 'Demo Patient', email: 'patient@demo.com', role: 'PATIENT', isApproved: true },
-    { name: 'Demo Doctor', email: 'doctor@demo.com', role: 'DOCTOR', isApproved: true },
-    { name: 'Demo Administrator', email: 'admin@demo.com', role: 'ADMIN', isApproved: true }
+    { name: 'Demo Patient', email: 'patient@demo.com', role: 'PATIENT', emailVerified: true, isApproved: true },
+    { name: 'Demo Doctor', email: 'doctor@demo.com', role: 'DOCTOR', emailVerified: true, isApproved: true },
+    { name: 'Demo Administrator', email: 'admin@demo.com', role: 'ADMIN', emailVerified: true, isApproved: true }
   ] as const;
   const users = new Map<string, any>();
   for (const input of demoUsers) {
