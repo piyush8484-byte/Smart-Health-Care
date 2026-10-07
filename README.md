@@ -56,13 +56,13 @@ Node.js, Express, TypeScript, and MongoDB/Mongoose. API base path: `/api/v1`; he
 ### Run on Windows PowerShell
 
 1. Install Node.js and MongoDB, then open PowerShell in the project directory.
-2. Copy `.env.example` to `.env` and set unique JWT secrets, `MONGODB_URI`, and a 32-character encryption key. Keep the demo password for local demos only.
+2. Copy `.env.example` to `.env` and set unique JWT secrets, `MONGODB_URI`, and a 32-character encryption key. Never use example secrets in a deployed environment.
 3. Start MongoDB, then install dependencies from the repository root with `npm install`.
-4. Seed the demo accounts using `npm run seed`.
-5. Start the API and client together using `npm run dev`. The API is at `http://localhost:5000`; the website is at `http://localhost:5173`.
-6. In another terminal, run `npm run device:simulate` to post simulated vitals. Stop the simulator with Ctrl+C.
+4. Start the API and client together using `npm run dev`. The API is at `http://localhost:5000`; the website is at `http://localhost:5173`.
+5. Register patient and doctor accounts through the website. Doctor accounts require administrator approval before they appear in appointment searches.
+6. For local development only, `npm run seed` creates sample accounts and records. Do not use seeded accounts or sample health data in a deployed environment. Run `npm run device:simulate` only when you want to test the local vitals flow; stop it with Ctrl+C.
 
-The seeded accounts are `patient@demo.com`, `doctor@demo.com`, and `admin@demo.com`; each uses the development-only `DEMO_PASSWORD` from `.env` (example: `DemoPass123!`). Change this value outside local demos.
+Administrator accounts are not available through public registration. Provision administrator access only through a trusted deployment and database administration process.
 
 ### API Summary
 
@@ -76,12 +76,12 @@ Run `docker compose up --build` for the client, API, and MongoDB at `http://loca
 
 This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml` that runs the backend test suite and both production builds on every push and pull request to `main`. Use the same checks before deploying to staging or production. For a hosted deployment, copy `.env.production.example` to `.env.production`, set real secrets and origins, then run `docker compose -f docker-compose.prod.yml up --build -d` to start the API, web frontend, and MongoDB together. This arrangement is designed for a platform-managed TLS endpoint in front of the web container while keeping the application and database behind a private internal network configuration.
 
-### Demo Flow
+### Local Role-Based Workspace Walkthrough
 
-1. Sign in as a patient and show the consolidated record and upcoming appointment view.
-2. Start the device simulator and show new vitals, an explainable risk flag, and an in-app alert.
-3. Sign in as a doctor to review the authorized patient data and appointment schedule.
-4. Sign in as an administrator to inspect platform users and access audit events.
+1. Register a patient account to review health records, monitoring, care team and appointments.
+2. Register a doctor account and approve it through an administrator account to review patient schedules and authorized information.
+3. Use the local device simulator to test incoming vitals, explainable risk flags and in-app alerts.
+4. Use an administrator account to manage doctor approvals, platform users and access audit events.
 
 ### Future Scope
 

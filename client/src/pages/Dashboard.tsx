@@ -28,6 +28,14 @@ const paths: Record<string, string> = {
   insights: 'Health insights', notifications: 'Notifications', people: 'People & access', settings: 'Settings'
 };
 
+function sectionLabel(section: string, role: Role): string {
+  if (section === 'people') {
+    if (role === 'PATIENT') return 'Care team';
+    if (role === 'DOCTOR') return 'My patients';
+  }
+  return paths[section] || 'Workspace';
+}
+
 function extractItems<T>(data: PageData<T> | T[] | null | undefined): T[] {
   if (Array.isArray(data)) return data;
   return data?.items || [];
@@ -54,7 +62,7 @@ export default function Dashboard() {
   const { pushToast } = useToasts();
   const navigate = useNavigate();
   const user = session!.user;
-  const effectiveRole: Role = user.role === 'ADMIN' ? 'DOCTOR' : user.role;
+  const effectiveRole = user.role;
   const [mobileNav, setMobileNav] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -150,12 +158,12 @@ export default function Dashboard() {
       <Link to="/" className="brand-lockup dashboard-brand"><span className="brand-mark"><HeartPulse size={19} /></span><span>smart<span className="brand-light">care</span><small>CARE WORKSPACE</small></span></Link>
       <div className="workspace-switch"><span className={`workspace-avatar ${effectiveRole.toLowerCase()}`}>{initials(user.name)}</span><span><b>{user.name}</b><small>{roleLabel(effectiveRole)}</small></span><span className="workspace-chevron"><Check size={14} /></span></div>
       <div className="sidebar-label">WORKSPACE</div>
-      <nav className="dashboard-nav" aria-label="Workspace navigation">{navItems.map(({ id, icon: Icon }) => <NavLink key={id} to={`/app/${id}`} onClick={() => setMobileNav(false)} className={({ isActive }) => `dashboard-nav-link ${isActive ? 'active' : ''}`}><Icon size={17} /><span>{paths[id]}</span>{id === 'notifications' && unread > 0 && <i className="unread-count">{unread}</i>}</NavLink>)}</nav>
+      <nav className="dashboard-nav" aria-label="Workspace navigation">{navItems.map(({ id, icon: Icon }) => <NavLink key={id} to={`/app/${id}`} onClick={() => setMobileNav(false)} className={({ isActive }) => `dashboard-nav-link ${isActive ? 'active' : ''}`}><Icon size={17} /><span>{sectionLabel(id, effectiveRole)}</span>{id === 'notifications' && unread > 0 && <i className="unread-count">{unread}</i>}</NavLink>)}</nav>
       <div className="sidebar-bottom"><div className="support-note"><div><ShieldCheck size={16} /><b>Private by design</b></div><p>Your records are shared only through role access and consent.</p><Link to="/privacy">Privacy approach <ArrowRight size={13} /></Link></div><button className="dashboard-nav-link sidebar-signout" onClick={signOutAndReturn}><LogOut size={17} /><span>Sign out</span></button></div>
     </aside>
     {mobileNav && <button className="sidebar-scrim" aria-label="Close workspace navigation" onClick={() => setMobileNav(false)} />}
     <section className="dashboard-main">
-      <header className="dashboard-topbar"><button className="icon-button dashboard-menu-toggle" onClick={() => setMobileNav((open) => !open)} aria-label="Toggle workspace navigation"><Menu size={19} /></button><div className="breadcrumbs"><span>Workspace</span><span>/</span><b>{paths[section]}</b></div><div className="topbar-actions"><span className={`api-status ${apiOnline === null ? '' : apiOnline ? 'online' : 'offline'}`}><i />{apiOnline === null ? 'Checking API' : apiOnline ? 'API online' : 'API unavailable'}</span><button className="icon-button" onClick={toggleTheme} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={17} /> : <Moon size={17} />}</button><button className="notification-top" onClick={() => navigate('/app/notifications')} aria-label={`${unread} unread notifications`}><Bell size={18} />{unread > 0 && <i />}</button><span className="top-avatar">{initials(user.name)}</span></div></header>
+      <header className="dashboard-topbar"><button className="icon-button dashboard-menu-toggle" onClick={() => setMobileNav((open) => !open)} aria-label="Toggle workspace navigation"><Menu size={19} /></button><div className="breadcrumbs"><span>Workspace</span><span>/</span><b>{sectionLabel(section, effectiveRole)}</b></div><div className="topbar-actions"><span className={`api-status ${apiOnline === null ? '' : apiOnline ? 'online' : 'offline'}`}><i />{apiOnline === null ? 'Checking API' : apiOnline ? 'API online' : 'API unavailable'}</span><button className="icon-button" onClick={toggleTheme} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={17} /> : <Moon size={17} />}</button><button className="notification-top" onClick={() => navigate('/app/notifications')} aria-label={`${unread} unread notifications`}><Bell size={18} />{unread > 0 && <i />}</button><span className="top-avatar">{initials(user.name)}</span></div></header>
       <main className="dashboard-content"><div className="dashboard-heading"><div><span className="dashboard-kicker">{formatDate(new Date().toISOString(), { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}</span><h1>{headingFor(section, effectiveRole, user.name)}</h1><p>{subheadingFor(section, effectiveRole)}</p></div>{section === 'overview' && effectiveRole === 'PATIENT' && <Link className="button button-primary" to="/app/appointments"><Plus size={16} /> Book an appointment</Link>}</div>
         {loadError && <div className="inline-alert alert-warning"><AlarmClock size={17} /><span>{loadError} Some sections may be incomplete.</span><button onClick={() => { setLoading(true); void refreshCore(); }}>Retry</button></div>}
         {loading ? <DashboardSkeleton /> : <>
@@ -173,17 +181,26 @@ export default function Dashboard() {
   </div>;
 }
 
-function roleLabel(role: Role): string { return role === 'PATIENT' ? 'Patient workspace' : 'Clinician workspace'; }
+function roleLabel(role: Role): string {
+  if (role === 'PATIENT') return 'Patient workspace';
+  if (role === 'DOCTOR') return 'Doctor workspace';
+  return 'Administrator workspace';
+}
 function headingFor(section: string, role: Role, name: string): string {
   if (section === 'overview') return `${role === 'PATIENT' ? 'Good to see you' : 'Good morning'}, ${name.split(' ')[0]}`;
-  if (section === 'people') return role === 'PATIENT' ? 'Your care team' : 'Your patient list';
-  return paths[section] || 'Workspace';
+  if (section === 'people') return role === 'PATIENT' ? 'Your care team' : role === 'DOCTOR' ? 'Your patients' : 'People & access';
+  return sectionLabel(section, role);
 }
 function subheadingFor(section: string, role: Role): string {
   if (section === 'overview') return role === 'PATIENT' ? 'Your health, appointments and care updates in one view.' : 'Your schedule and the patients who need your attention.';
   if (section === 'monitoring') return 'Recent health readings with simple, explainable context.';
   if (section === 'records') return 'Your health history, reports and prescriptions.';
-  return `Review and manage ${paths[section]?.toLowerCase() || 'your workspace'} details.`;
+  if (section === 'people') {
+    if (role === 'PATIENT') return 'Clinicians connected to your appointments and care.';
+    if (role === 'DOCTOR') return 'Review patients in your care schedule and their shared information.';
+    return 'Manage accounts, doctor approvals and access history.';
+  }
+  return `Review and manage ${sectionLabel(section, role).toLowerCase()} details.`;
 }
 
 function DashboardSkeleton() {

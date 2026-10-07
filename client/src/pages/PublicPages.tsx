@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BellRing, CalendarDays, Check, ChevronDown, Cloud, FileHeart, HeartPulse, LockKeyhole, MonitorSmartphone, ShieldCheck, Sparkles, Stethoscope, UsersRound, Wifi } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useToasts } from '../app/providers';
 
 const modules = [
   { icon: FileHeart, title: 'One health record', text: 'Reports, prescriptions, allergies and history gathered into a record you can actually find.', tint: 'mint' },
@@ -18,8 +14,8 @@ const modules = [
 const faqs = [
   ['Is Smart Healthcare a diagnostic tool?', 'No. Risk flags are explainable decision support based on submitted vital readings. They are not a diagnosis or a replacement for advice from a qualified clinician.'],
   ['Who can see my records?', 'Patients can review their own information. Clinicians need an active care relationship or patient sharing consent. Administrative access is role-restricted and recorded.'],
-  ['Can I use the platform without a wearable?', 'Yes. Readings can be entered manually or submitted by the included device simulator for demonstrations.'],
-  ['Where are reports stored?', 'This demo stores report files privately on the API host. Production deployments should use managed encrypted object storage and backup policies.']
+  ['Can I use the platform without a wearable?', 'Yes. Patients can enter readings manually. Connected-device integrations can also submit readings to the health timeline.'],
+  ['Where are reports stored?', 'Report files are kept in the private storage configured for the service. Deployment operators should configure encryption, backups, retention and access controls before storing real health information.']
 ];
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -46,7 +42,7 @@ export function HomePage() {
     <section className="section section-intro" id="platform">
       <div className="intro-copy"><Eyebrow>THE CARE GAP</Eyebrow><h2>Your health story<br />shouldn’t live in<br /><span>six different places.</span></h2></div>
       <div className="intro-detail"><p>Scattered records. Missed follow-ups. Numbers that nobody has time to explain. When care information is disconnected, it’s harder for patients to stay informed and for clinicians to see the whole picture.</p><p>Smart Healthcare brings the essential pieces together, so the next step in care feels clearer and more coordinated.</p><Link to="/services" className="text-link">See how it connects <ArrowRight size={16} /></Link></div>
-      <div className="intro-stats"><div><strong>01</strong><span>connected patient record</span></div><div><strong>24/7</strong><span>vital monitoring demo</span></div><div><strong>3</strong><span>role-specific workspaces</span></div><div><strong>0</strong><span>diagnostic claims</span></div></div>
+      <div className="intro-stats"><div><strong>01</strong><span>connected patient record</span></div><div><strong>LIVE</strong><span>vital trend monitoring</span></div><div><strong>3</strong><span>role-specific workspaces</span></div><div><strong>0</strong><span>diagnostic claims</span></div></div>
     </section>
 
     <section className="section modules-section">
@@ -107,7 +103,7 @@ export function ServicesPage() {
 
 export function AboutPage() {
   const team = ['Aryan Deshmukh', 'Aaryan Chavan', 'Bhagwat Malode', 'Piyush Bhogil'];
-  return <PageIntro eyebrow="ABOUT THE PROJECT" title={<>Technology that<br />keeps care <em>connected.</em></>} copy="A student project exploring how secure cloud services and explainable analytics can help patients and clinicians coordinate around one clearer health story.">
+  return <PageIntro eyebrow="ABOUT SMARTCARE" title={<>Technology that<br />keeps care <em>connected.</em></>} copy="A connected care platform designed to help patients and clinicians coordinate around one clearer health story.">
     <div className="about-story"><div><Eyebrow>OUR VISION</Eyebrow><h2>From scattered records<br />to a shared picture.</h2></div><div><p>Smart Healthcare Cloud Platform brings electronic health records, appointments, remote monitoring and notifications into a single role-aware experience.</p><p>We are building around a simple principle: technology should make health information easier to understand and safer to share, while leaving diagnosis and treatment decisions with qualified healthcare professionals.</p></div></div>
     <div className="team-heading"><Eyebrow>THE PROJECT TEAM</Eyebrow><h2>Built by team SY2514.</h2></div><div className="team-grid">{team.map((name, index) => <article className="team-card" key={name}><span className={`team-avatar team-${index + 1}`}>{name.split(' ').map((word) => word[0]).join('')}</span><span className="team-index">TEAM MEMBER / 0{index + 1}</span><h3>{name}</h3><p>Smart Healthcare Cloud Platform</p></article>)}</div>
     <div className="faculty-strip"><div><Eyebrow>FACULTY GUIDE</Eyebrow><h3>Prof. Rohidas Sangore</h3><p>MIT School of Computing · MIT-ADT University, Pune</p></div><span>GROUP SY2514</span></div>
@@ -130,25 +126,16 @@ export function ArchitecturePage() {
   </PageIntro>;
 }
 
-const contactSchema = z.object({ name: z.string().trim().min(2, 'Please enter your name.'), email: z.string().email('Enter a valid email address.'), topic: z.string().min(1, 'Choose a topic.'), message: z.string().trim().min(20, 'Add at least 20 characters.').max(1200, 'Keep your message under 1,200 characters.') });
-type ContactInput = z.infer<typeof contactSchema>;
-
 export function ContactPage() {
-  const { pushToast } = useToasts();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<ContactInput>({ resolver: zodResolver(contactSchema) });
-  const submit = (data: ContactInput) => {
-    pushToast(`Thanks, ${data.name}. Your message is ready for the project team.`, 'success', 'Message received');
-    reset();
-  };
-  return <PageIntro eyebrow="CONTACT / 04" title={<>Let’s make care<br /><em>work together.</em></>} copy="Questions about the platform or a project presentation? Send the team a note.">
-    <form className="contact-form" onSubmit={handleSubmit(submit)} noValidate><div className="form-grid"><label className="field"><span>Your name</span><input {...register('name')} placeholder="Name" aria-invalid={!!errors.name} />{errors.name && <small className="field-error">{errors.name.message}</small>}</label><label className="field"><span>Email address</span><input {...register('email')} type="email" placeholder="you@example.com" aria-invalid={!!errors.email} />{errors.email && <small className="field-error">{errors.email.message}</small>}</label><label className="field"><span>Topic</span><select {...register('topic')} defaultValue=""><option value="" disabled>Select a topic</option><option>Project information</option><option>Technical question</option><option>Demo and presentation</option><option>Other</option></select>{errors.topic && <small className="field-error">{errors.topic.message}</small>}</label><label className="field field-wide"><span>Message</span><textarea {...register('message')} rows={5} placeholder="What would you like to know?" aria-invalid={!!errors.message} />{errors.message && <small className="field-error">{errors.message.message}</small>}</label></div><button className="button button-primary" disabled={isSubmitting}>Send message <ArrowUpRight size={16} /></button><p className="form-note">Demo form: messages are not sent to an external inbox.</p></form>
+  return <PageIntro eyebrow="CONTACT / 04" title={<>Let’s make care<br /><em>work together.</em></>} copy="For assistance, reach out to the organization that manages your SmartCare service.">
+    <section className="contact-guidance"><h2>Clinical questions</h2><p>For medical advice, appointments or questions about your health records, contact your doctor or care provider directly.</p><h2>Account support</h2><p>For sign-in and account access help, contact the organization that provided your SmartCare account.</p></section>
   </PageIntro>;
 }
 
 export function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
   const privacy = kind === 'privacy';
-  return <PageIntro eyebrow={privacy ? 'PRIVACY POLICY' : 'TERMS OF USE'} title={privacy ? <>Your health information<br /><em>deserves care.</em></> : <>Clear terms for<br /><em>connected care.</em></>} copy="Last updated October 2026 · Student project demonstration">
-    <div className="legal-copy"><h2>{privacy ? 'What this demonstration stores' : 'Educational demonstration'}</h2><p>{privacy ? 'The platform is a project demonstration. Demo accounts and data are intended for local testing only. Do not enter real patient information. Account details, consent preferences, appointments, vital readings and report files may be stored in the configured MongoDB database or private upload directory.' : 'Smart Healthcare Cloud Platform is provided for educational demonstration. It is not a medical device, healthcare provider, emergency service or source of diagnosis or treatment.'}</p><h2>{privacy ? 'Access and security' : 'No medical advice'}</h2><p>{privacy ? 'The backend applies role-based permissions, encrypts selected clinical notes, and records access events. Local deployments should use unique secrets, TLS, restricted origins, protected storage and tested backups. The demo implementation is not a certification of compliance with any healthcare privacy law.' : 'Risk levels and recommendations are explainable decision support only. For a medical concern, consult a qualified clinician. In an emergency, contact local emergency services.'}</p><h2>{privacy ? 'Retention and contact' : 'Your responsibilities'}</h2><p>{privacy ? 'Data retention depends on the local MongoDB and upload storage configuration. Administrators should remove demo data when no longer needed. Contact the project team through the contact page with questions.' : 'Use demo credentials only in non-production environments. You are responsible for protecting account credentials and configuring the deployment environment before any real-world use.'}</p></div>
+  return <PageIntro eyebrow={privacy ? 'PRIVACY POLICY' : 'TERMS OF USE'} title={privacy ? <>Your health information<br /><em>deserves care.</em></> : <>Clear terms for<br /><em>connected care.</em></>} copy="Last updated October 2026 · Data handling depends on your deployment">
+    <div className="legal-copy"><h2>{privacy ? 'Information stored by the service' : 'Service scope'}</h2><p>{privacy ? 'The service may store account details, patient profiles, consent preferences, appointments, vital readings and uploaded report files in the database and private file storage configured by the deployment operator. Before storing real health information, confirm that the deployment meets applicable privacy, security and legal requirements.' : 'Smart Healthcare Cloud provides tools for care coordination and health record management. It is not a medical device, healthcare provider, emergency service or source of diagnosis or treatment.'}</p><h2>{privacy ? 'Access and security' : 'No medical advice'}</h2><p>{privacy ? 'The application uses role-based permissions, encrypts selected clinical notes, and records access events. Deployment operators are responsible for unique secrets, TLS, restricted origins, protected storage, tested backups and any required compliance review.' : 'Risk levels and recommendations are explainable decision support only. For a medical concern, consult a qualified clinician. In an emergency, contact local emergency services.'}</p><h2>{privacy ? 'Retention and contact' : 'Your responsibilities'}</h2><p>{privacy ? 'Retention depends on the database and file-storage policies configured by the deployment operator. Contact the service operator through the published support channel with questions about your information.' : 'Protect your account credentials and use the service in accordance with applicable law and the policies of the organization operating your deployment.'}</p></div>
   </PageIntro>;
 }
 
