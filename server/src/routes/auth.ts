@@ -2,10 +2,13 @@ import { Router } from 'express';
 import { forgotPassword, login, logout, refresh, register, resendVerification, resetPassword, verifyEmail } from '../controllers/authController';
 import { asyncHandler } from '../utils/asyncHandler';
 import { rateLimit } from 'express-rate-limit';
+import { authenticate } from '../middleware/auth';
+import { currentUser } from '../controllers/authController';
 
 const router = Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false });
 
+router.get('/me', authenticate, asyncHandler(currentUser));
 router.post('/register', authLimiter, asyncHandler(register));
 router.post('/verify-email', authLimiter, asyncHandler(verifyEmail));
 router.post('/resend-verification', authLimiter, asyncHandler(resendVerification));

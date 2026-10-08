@@ -11,14 +11,18 @@ import { AppError } from '../utils/errors';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/tokens';
 
 const registerSchema = z.object({
-  name: z.string().trim().min(2).max(120),
+  fullName: z.string().trim().min(2).max(120).optional(),
+  name: z.string().trim().min(2).max(120).optional(),
   email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
   password: z.string().min(10).max(128),
   confirmPassword: z.string().min(1),
-  role: z.enum(['PATIENT', 'DOCTOR']),
+  role: z.enum(['patient', 'doctor', 'PATIENT', 'DOCTOR']).transform((role) => role.toUpperCase() as 'PATIENT' | 'DOCTOR'),
   specialization: z.string().trim().min(2).max(100).optional(),
   licenseNumber: z.string().trim().min(3).max(80).optional()
 }).superRefine((input, context) => {
+  if (!(input.fullName || input.name)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['fullName'], message: 'Full name is required' });
+  }
   if (input.password !== input.confirmPassword) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['confirmPassword'], message: 'Passwords do not match' });
   }
@@ -140,7 +144,7 @@ export async function register(request: Request, response: Response): Promise<vo
   const input = registerSchema.parse(request.body);
   const passwordHash = await bcrypt.hash(input.password, 12);
   const user = await User.create({
-    name: input.name,
+    name: input.fullName ?? input.name!,
     email: input.email,
     passwordHash,
     role: input.role,

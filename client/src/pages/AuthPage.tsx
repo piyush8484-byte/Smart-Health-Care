@@ -86,9 +86,9 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       if (isRegister) {
         const registration = await registerRequest({
           ...values,
-          name: values.name?.trim(),
+          fullName: values.name?.trim(),
           email: values.email?.trim().toLowerCase(),
-          role: values.role || 'PATIENT'
+          role: (values.role || 'PATIENT').toLowerCase()
         });
         const localDelivery = registration.delivery === 'development-console';
         pushToast(

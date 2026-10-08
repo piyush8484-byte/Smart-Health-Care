@@ -6,8 +6,8 @@ type Envelope<T> = { success: boolean; message: string; data: T };
 
 const SESSION_KEY = 'smart-healthcare.session';
 const configuredApiBase = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '');
-const API_BASE = configuredApiBase || '/api/v1';
-const API_ORIGIN = configuredApiBase?.replace(/\/api\/v1$/, '') || '';
+const API_ORIGIN = configuredApiBase?.replace(/\/api(?:\/v1)?$/, '') || '';
+const API_BASE = `${API_ORIGIN}/api`;
 
 export function apiFileUrl(path: string): string {
   return `${API_ORIGIN}${path}`;

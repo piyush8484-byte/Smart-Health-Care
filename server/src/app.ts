@@ -34,6 +34,12 @@ app.get('/api/health', (_request, response) => {
 });
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1', apiRouter);
+app.use('/api/auth', authRouter);
+app.use('/api', apiRouter);
+app.use('/api', (request, response) => {
+  console.warn(`[api] ${request.method} ${request.originalUrl} not found`);
+  response.status(404).json({ success: false, message: 'API route not found', data: null });
+});
 app.use((_request, response) => {
   response.status(404).json({ success: false, message: 'API route not found', data: null });
 });
